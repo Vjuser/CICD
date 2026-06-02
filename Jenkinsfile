@@ -21,42 +21,40 @@ pipeline {
             }
         }
 
-stage('Push To ECR') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
-        ]]) {
+        stage('Push To ECR') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
 
-            sh '''
-            aws ecr get-login-password --region us-east-1 | \
-            docker login --username AWS \
-            --password-stdin 499290259508.dkr.ecr.us-east-1.amazonaws.com
+                    sh '''
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin 499290259508.dkr.ecr.us-east-1.amazonaws.com
 
-            docker tag flask-devops-app:latest \
-            499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app:latest
-
-            docker push \
-            499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app:latest
-            '''
+                    docker tag flask-devops-app:latest $ECR_REPO:latest
+                    docker push $ECR_REPO:latest
+                    '''
+                }
+            }
         }
-    }
-}
 
-stage('Deploy To EKS') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-creds'
-        ]]) {
+        stage('Deploy To EKS') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
 
-            sh '''
-            aws eks update-kubeconfig --region us-east-1 --name vjcluster
+                    sh '''
+                    aws eks update-kubeconfig \
+                    --region $AWS_REGION \
+                    --name $CLUSTER_NAME
 
-            helm upgrade --install flask-app ./flask-chart \
-            --set image.repository=499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app \
-            --set image.tag=latest
-            '''
+                    helm upgrade --install flask-app ./flask-chart
+                    '''
+                }
+            }
         }
     }
 }
