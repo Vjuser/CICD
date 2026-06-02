@@ -22,11 +22,19 @@ pipeline {
         }
 
         stage('Push To ECR') {
-            steps {
-                withCredentials([
-    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-]) {
+withCredentials([[
+    $class: 'AmazonWebServicesCredentialsBinding',
+    credentialsId: 'aws-creds'
+]]) {
+
+    sh '''
+    aws ecr get-login-password --region $AWS_REGION | \
+    docker login --username AWS --password-stdin 499290259508.dkr.ecr.us-east-1.amazonaws.com
+
+    docker tag flask-devops-app:latest $ECR_REPO:latest
+    docker push $ECR_REPO:latest
+    '''
+} {
 
                     sh '''
                     aws ecr get-login-password --region $AWS_REGION | \
