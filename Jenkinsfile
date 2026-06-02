@@ -43,16 +43,20 @@ stage('Push To ECR') {
     }
 }
 
-        stage('Deploy To EKS') {
-            steps {
-                sh '''
-                aws eks update-kubeconfig \
-                --region $AWS_REGION \
-                --name $CLUSTER_NAME
+stage('Deploy To EKS') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
 
-                helm upgrade --install flask-app ./flask-chart
-                '''
-            }
+            sh '''
+            aws eks update-kubeconfig --region us-east-1 --name vjcluster
+
+            helm upgrade --install flask-app ./flask-chart \
+            --set image.repository=499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app \
+            --set image.tag=latest
+            '''
         }
     }
 }
