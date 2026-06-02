@@ -17,7 +17,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t flask-devops-app .'
+                sh '''
+                docker build -t flask-devops-app .
+                '''
             }
         }
 
@@ -35,6 +37,13 @@ withCredentials([[
     docker push $ECR_REPO:latest
     '''
 } {
+            steps {
+
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+
 
                     sh '''
                     aws ecr get-login-password --region $AWS_REGION | \
@@ -49,10 +58,11 @@ withCredentials([[
 
         stage('Deploy To EKS') {
             steps {
-                withCredentials([
-                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
+
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
 
                     sh '''
                     aws eks update-kubeconfig \
@@ -64,5 +74,6 @@ withCredentials([[
                 }
             }
         }
+
     }
 }
