@@ -21,24 +21,27 @@ pipeline {
             }
         }
 
-        stage('Push To ECR') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
+stage('Push To ECR') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-creds'
+        ]]) {
 
-                    sh '''
-                    aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REPO
+            sh '''
+            aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS \
+            --password-stdin 499290259508.dkr.ecr.us-east-1.amazonaws.com
 
-                    docker tag flask-devops-app:latest $ECR_REPO:latest
+            docker tag flask-devops-app:latest \
+            499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app:latest
 
-                    docker push $ECR_REPO:latest
-                    '''
-                }
-            }
+            docker push \
+            499290259508.dkr.ecr.us-east-1.amazonaws.com/flask-devops-app:latest
+            '''
         }
+    }
+}
 
         stage('Deploy To EKS') {
             steps {
