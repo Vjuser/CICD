@@ -23,17 +23,16 @@ pipeline {
 
         stage('Push To ECR') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-creds'
-                ]]) {
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
 
                     sh '''
                     aws ecr get-login-password --region $AWS_REGION | \
-                    docker login --username AWS --password-stdin $ECR_REPO
+                    docker login --username AWS --password-stdin 499290259508.dkr.ecr.us-east-1.amazonaws.com
 
                     docker tag flask-devops-app:latest $ECR_REPO:latest
-
                     docker push $ECR_REPO:latest
                     '''
                 }
@@ -42,13 +41,19 @@ pipeline {
 
         stage('Deploy To EKS') {
             steps {
-                sh '''
-                aws eks update-kubeconfig \
-                --region $AWS_REGION \
-                --name $CLUSTER_NAME
+                withCredentials([
+                    string(credentialsId: 'aws-access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'aws-secret-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
 
-                helm upgrade --install flask-app ./flask-chart
-                '''
+                    sh '''
+                    aws eks update-kubeconfig \
+                    --region $AWS_REGION \
+                    --name $CLUSTER_NAME
+
+                    helm upgrade --install flask-app ./flask-chart
+                    '''
+                }
             }
         }
     }
